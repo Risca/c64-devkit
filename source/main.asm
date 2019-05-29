@@ -1,4 +1,7 @@
 	*=$0801
+	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $34, $00, $00, $00
+
+	*=$0810
 
 	; Load timer with 0x0265
 	lda #$65
@@ -38,7 +41,6 @@ text:
 	!scr "hello world"
 
 ; NMI interrupt
-	*=$1000
 nmi:
 	inc $d020
 	pha

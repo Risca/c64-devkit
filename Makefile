@@ -27,7 +27,7 @@ TABLE3ARGS=256 80 255 0 360 60 2 1
 TABLE4=sin4.dat
 TABLE4ARGS=256 90 255 0 720 80 1 0
 
-all: luts compile crunch run
+all: run
 
 clean:
 	$(CLEAN) $(CLEANARGS) $(BUILDPATH)/* $(TABLESPATH)/*
@@ -38,11 +38,13 @@ luts:
 	$(GENOSINEPATH)/$(GENOSINE) $(TABLE3ARGS) > $(TABLESPATH)/$(TABLE3)
 	$(GENOSINEPATH)/$(GENOSINE) $(TABLE4ARGS) > $(TABLESPATH)/$(TABLE4)
 
-compile:
+compile: luts
 	$(COMPILERPATH)/$(COMPILER) $(COMPILERARGS) $(BUILDPATH)/$(BUILD) $(SOURCEPATH)/$(SOURCE)
 
-crunch:
+crunch: compile
 	$(CRUNCHERPATH)/$(CRUNCHER) $(CRUNCHERARGS) $(BUILDPATH)/$(BUILD) $(BUILDPATH)/$(BUILD)
 
-run:
+run: compile
 	$(EMULATORPATH)/$(EMULATOR) $(EMULATORARGS) $(BUILDPATH)/$(BUILD)
+
+.PHONY: all run clean luts compile crunch run
