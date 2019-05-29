@@ -1,50 +1,79 @@
+; Theory:
+; If we
+; * trigger a raster interrupt just before the end of line 24,
+; * switch to 25 line mode,
+; * delay a bit to get past end of line 24,
+; * then switch back to 24 line mode
+; the VIC will "forget" to clear the bottom border, and also
+; the top border.
+
 	*=$0801
 	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $34, $00, $00, $00
 
 	*=$0810
+start:
+	; disable interrupt from CIA controller
+	sei
+	lda #$7F
+	sta $DC0D
 
-	; Load timer with 0x0265
-	lda #$65
-	sta $dd04
-	lda #$02
-	sta $dd05
+	lda #<irq1
+	sta $0314
+	lda #>irq1
+	sta $0315
 
-	; Make timer interrupt jump to our nmi routine below
-	lda #<nmi
-	sta $0318
-	lda #>nmi
-	sta $0319
+	; set raster line to trigger interrupt on
+	lda #$FA
+	sta $D012
+	lda #$1B ; default = 1b
+	sta $D011
 
-	; Enable interrups on timer A, and reset it
-	lda #$1
-	sta $dd0e
-	lda #$81
-	sta $dd0d
+	; clear up artifacts?
+	lda #$00
+	sta $3FFF
 
-	lda #3
-	sta $d020
-	sta $d021
+	; acknowledge interrupts
+	lda $DC0D
+	lda #$FF
+	sta $D019
 
-	ldx #0
+	; enable raster interrupt
+	lda #$01
+	sta $D01A
 
-loop:
-	lda text,x
-	sta $0400+40*12+14,x
-	inx
-	cpx #11
-	bne loop
+	cli
 
-wait:
-	jmp wait
+waitSpace
+	lda $DC01
+	and #$10
+	bne waitSpace
 
-text:
-	!scr "hello world"
+	jmp $FCE2
 
-; NMI interrupt
-nmi:
-	inc $d020
-	pha
-	lda $dd0d
-	pla
-	rti
+irq1:
+	; set 25 rows
+	lda $D011
+	and #$F7
+	sta $D011
+
+	; adjust background color
+	dec $d020
+
+	ldx #$10
+dummyDelay:
+	dex
+	bne dummyDelay
+
+	; set 24 rows
+	lda $D011
+	ora #$08
+	sta $D011
+
+	; restore background color
+	inc $D020
+
+	lda #$FF
+	sta $D019
+
+	jmp $EA81
 
