@@ -6,11 +6,8 @@
 ; * then switch back to 24 line mode
 ; the VIC will "forget" to clear the bottom border, and also
 ; the top border.
-
-	*=$0801
-	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $34, $00, $00, $00
-
-	*=$0810
+*=$0801
+	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $31, $00, $00, $00
 start:
 	; disable interrupt from CIA controller
 	sei
@@ -43,12 +40,20 @@ start:
 
 	cli
 
-waitSpace
+_waitSpace
 	lda $DC01
 	and #$10
-	bne waitSpace
+	bne _waitSpace
 
 	jmp $FCE2
+
+; variables
+BorderColor
+	!byte 0
+BorderColor_counter
+	!byte 60
+BorderColor_counterResetValue
+	!byte 60
 
 irq1:
 	; set 25 rows
@@ -57,7 +62,14 @@ irq1:
 	sta $D011
 
 	; adjust background color
-	dec $d020
+	dec BorderColor_counter
+	bne noChange
+	lda BorderColor_counterResetValue
+	sta BorderColor_counter
+	inc BorderColor
+noChange:
+	lda BorderColor
+	sta $D020
 
 	ldx #$10
 dummyDelay:
@@ -69,8 +81,9 @@ dummyDelay:
 	ora #$08
 	sta $D011
 
-	; restore background color
-	inc $D020
+	; restore border color
+	lda #$0E
+	sta $D020
 
 	lda #$FF
 	sta $D019
