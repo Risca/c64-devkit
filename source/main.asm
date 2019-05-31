@@ -1,6 +1,7 @@
 code = $0801
 sprites = $3E00
 tables = $5000
+charset = $3800
 
 ; misc registers
 BorderColor     = $D020
@@ -9,6 +10,12 @@ BackgroundColor = $D021
 ; sprite registers
 spritePointer = $07F8
 spriteEnable = $D015
+
+; screen stuff
+screen = $0400
+colors = $d800
+rasterLine = $d012
+
 
 ; sprite position registers
 SP0X = $D000
@@ -37,8 +44,9 @@ SpriteB = $fd
 SpriteI = $fe
 SpriteR = $ff
 
-line1 = 0
-line2 = 150
+lineHello = 0
+lineScroll = 70
+lineBirdie = 150
 
 Temp         = $64
 FrameCounter = $90
@@ -70,16 +78,19 @@ sinTable4:
 	; SYS2061
 	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $31, $00, $00, $00
 start:
-	jsr $e544
-	jsr initSprites
-	jsr initMem
-	jsr initMisc
+	jsr $e544		;clear screen
+	jsr initSprites		;set up sprites
+	jsr initMem		;set up memory mapping
+	jsr initMisc		;
 	sei
 	jsr initIsr
 	cli
 
+
 main:
+	jsr scrollText
 	jmp main
+
 
 initSprites:
 	; setup sprite colors
@@ -112,8 +123,9 @@ initSprites:
 
 	rts
 
+
 initMem:
-	lda #%00011110
+	lda #%00010110
 	sta $d018
 	; $A000-$BFFF: RAM
 	; $D000-$DFFF: I/O
@@ -124,13 +136,16 @@ initMem:
 
 	rts
 
+
 initMisc:
 	; 25 rows, text mode
 	lda #$1b
 	sta $d011
 	lda #200
 	sta StartupDelay
+
 	rts
+
 
 initIsr:
 	; enable interrupts
@@ -146,13 +161,9 @@ initIsr:
 	lda #$01
 	sta $d01a
 
-	lda #line1
-	sta $d012
-
-	lda #<helloIsr
-	sta $fffe
-	lda #>helloIsr
-	sta $ffff
+	lda #lineHello
+	sta rasterLine
+	jsr setInterruptHello
 
 	rts
 
@@ -162,9 +173,12 @@ getFrameCounterInY:
 	dec StartupDelay
 	lda #0
 	sta FrameCounter
+
 returnFrameCounter:
 	ldy FrameCounter
+
 	rts
+
 
 showHello:
 	; Set sprite pointers
@@ -209,35 +223,22 @@ showHello:
 
 	rts
 
-helloIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
 
-	lda #$ff
-	sta $d019
+scrollText:
+	; Put some text
+	jsr textMode
+	ldx #$00
+scrollNext:
+	lda scrollerText,x
+	sta screen+40*10,x
+	lda #$01
+	sta colors+40*10,x
+	inx
+	cpx #53
+	bne scrollNext
 
-	jsr showHello
+	rts
 
-	inc FrameCounter
-
-	lda #line2
-	sta $d012
-
-	lda #<birdieIsr
-	sta $fffe
-	lda #>birdieIsr
-	sta $ffff
-
-	pla
-	tay
-	pla
-	tax
-	pla
-
-	rti
 
 showBirdie:
 	; Set sprite pointers
@@ -328,6 +329,68 @@ setBirdeSpriteYPosition
 
 	rts
 
+
+helloIsr:
+	pha
+	txa
+	pha
+	tya
+	pha
+
+	lda #$ff
+	sta $d019
+
+	jsr showHello
+
+	inc FrameCounter
+
+	lda #lineScroll
+	sta rasterLine
+	jsr setInterruptScroller
+
+	pla
+	tay
+	pla
+	tax
+	pla
+
+	rti
+
+
+scrollerIsr:
+	pha
+	txa
+	pha
+	tya
+	pha
+
+	dec BorderColor
+
+	lda #$ff
+	sta $d019
+
+	ldx #$ff
+dl1:
+	dex
+	bne dl1
+	
+	jsr scrollText
+
+	lda #lineBirdie
+	sta rasterLine
+	jsr setInterruptBirdie
+
+	inc BorderColor
+
+	pla
+	tay
+	pla
+	tax
+	pla
+
+	rti
+
+
 birdieIsr:
 	pha
 	txa
@@ -342,13 +405,9 @@ birdieIsr:
 
 	jsr showBirdie
 	
-	lda #line1
-	sta $d012
-
-	lda #<helloIsr
-	sta $fffe
-	lda #>helloIsr
-	sta $ffff
+	lda #lineHello
+	sta rasterLine
+	jsr setInterruptHello
 
 	dec BorderColor
 
@@ -359,4 +418,54 @@ birdieIsr:
 	pla
 
 	rti
+
+
+setInterruptHello:
+	lda #<helloIsr
+	sta $fffe
+	lda #>helloIsr
+	sta $ffff
+
+	rts
+
 	
+setInterruptBirdie:
+	lda #<birdieIsr
+	sta $fffe
+	lda #>birdieIsr
+	sta $ffff
+
+	rts
+
+
+setInterruptScroller:
+	lda #<scrollerIsr
+	sta $fffe
+	lda #>scrollerIsr
+	sta $ffff
+
+	rts
+
+
+scrollerText:
+	!scr "ABCDEFGHIJKLMNOPQRSTUVXYZ abcdefghijklmnopqrstuvwxyz"
+
+
+textMode:
+	lda #%11001000
+	sta $d016
+
+	lda #%00011011
+	sta $d011
+
+	rts
+
+
+graphicsMode:
+	lda #%11011000
+	sta $d016
+
+	lda #%00111011
+	sta $d011
+
+	rts
