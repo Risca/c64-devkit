@@ -128,7 +128,7 @@ initMisc:
 	; 25 rows, text mode
 	lda #$1b
 	sta $d011
-	lda #100
+	lda #200
 	sta StartupDelay
 	rts
 
