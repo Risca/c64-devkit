@@ -53,7 +53,8 @@ lineBottomBorder = 249
 
 Temp         = $64
 FrameCounter = $90
-StartupDelay = $92
+StartupDelayHigh = $92
+StartupDelayLow  = $93
 ; Flag bits:
 ; 0 = stop Birdie text oscillation
 Flags           = $FB
@@ -150,8 +151,10 @@ initMisc:
 	; 25 rows, text mode
 	lda #$1b
 	sta $d011
-	lda #200
-	sta StartupDelay
+	lda #$02
+	sta StartupDelayHigh
+	lda #$58
+	sta StartupDelayLow
 
 	rts
 
@@ -176,14 +179,30 @@ initIsr:
 
 
 getFrameCounterInY:
-	lda StartupDelay
+	lda StartupDelayLow
+	bne zeroFrameCounter
+	lda StartupDelayHigh
 	beq returnFrameCounter
-	dec StartupDelay
-	lda #0
-	sta FrameCounter
-
+zeroFrameCounter:
+	ldy #0
+	sty FrameCounter
 returnFrameCounter:
 	ldy FrameCounter
+
+	rts
+
+
+decreaseStartupDelay:
+	lda StartupDelayLow
+	beq decreaseDelayHigh ; low == 0 -> decrease high byte
+	dec StartupDelayLow
+	jmp decreaseDelayDone
+decreaseDelayHigh:
+	lda StartupDelayHigh
+	beq decreaseDelayDone ; both high:low == 0:0 -> done
+	dec StartupDelayHigh
+	dec StartupDelayLow
+decreaseDelayDone:
 
 	rts
 
@@ -351,6 +370,7 @@ helloIsr:
 	jsr showHello
 
 	inc FrameCounter
+	jsr decreaseStartupDelay
 
 	jsr setInterruptScroller
 
