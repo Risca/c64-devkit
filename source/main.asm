@@ -2,6 +2,8 @@ code = $0801
 sprites = $3E00
 tables = $5000
 charset = $3800
+music = $6FF6
+musicPlay = $7003
 
 ; misc registers
 BorderColor     = $D020
@@ -58,7 +60,7 @@ MusicPlayerVar1 = $FC ; Used by music player - don't touch
 MusicPlayerVar2 = $FD ; Used by music player - don't touch
 
 *=sprites
-!binary "sprites/helodbir.prg",512,2
+	!binary "sprites/helodbir.prg",512,2
 
 *= tables
 sinTable1:
@@ -74,18 +76,21 @@ sinTable3:
 sinTable4:
 	!source "tables/sin4.dat"
 
+*=music
+	!binary "music/mandelvogel.sid",,$7e
+
 *=code
 	; SYS2061
 	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $31, $00, $00, $00
 start:
 	jsr $e544		;clear screen
+	sei
 	jsr initSprites		;set up sprites
 	jsr initMem		;set up memory mapping
 	jsr initMisc		;
-	sei
+	jsr music
 	jsr initIsr
 	cli
-
 
 main:
 	jsr scrollText
