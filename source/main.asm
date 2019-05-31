@@ -49,6 +49,7 @@ SpriteR = $ff
 lineHello = 0
 lineScroll = 70
 lineBirdie = 150
+lineBottomBorder = 249
 
 Temp         = $64
 FrameCounter = $90
@@ -138,6 +139,9 @@ initMem:
 	; No ROM
 	lda #%00110101
 	sta $01
+	; no idea - removes artifacts on bottom border
+	lda #$00
+	sta $3FFF
 
 	rts
 
@@ -166,11 +170,10 @@ initIsr:
 	lda #$01
 	sta $d01a
 
-	lda #lineHello
-	sta rasterLine
 	jsr setInterruptHello
 
 	rts
+
 
 getFrameCounterInY:
 	lda StartupDelay
@@ -349,8 +352,6 @@ helloIsr:
 
 	inc FrameCounter
 
-	lda #lineScroll
-	sta rasterLine
 	jsr setInterruptScroller
 
 	pla
@@ -381,8 +382,6 @@ dl1:
 	
 	jsr scrollText
 
-	lda #lineBirdie
-	sta rasterLine
 	jsr setInterruptBirdie
 
 	inc BorderColor
@@ -409,10 +408,45 @@ birdieIsr:
 	sta $d019
 
 	jsr showBirdie
-	
-	lda #lineHello
-	sta rasterLine
+	jsr musicPlay
+
+	jsr setInterruptBottomBorder
+
+	dec BorderColor
+
+	pla
+	tay
+	pla
+	tax
+	pla
+
+	rti
+
+
+bottomBorderIsr:
+	pha
+	txa
+	pha
+	tya
+	pha
+
+	inc BorderColor
+
+	lda #$ff
+	sta $d019
+
+	; Set 24 rows
+	lda $D011
+	and #$F7
+	sta $D011
+
+	jsr musicPlay
 	jsr setInterruptHello
+
+	; Set 25 rows (revert hack in before)
+	lda $D011
+	ora #$08
+	sta $D011
 
 	dec BorderColor
 
@@ -426,6 +460,8 @@ birdieIsr:
 
 
 setInterruptHello:
+	lda #lineHello
+	sta rasterLine
 	lda #<helloIsr
 	sta $fffe
 	lda #>helloIsr
@@ -435,6 +471,8 @@ setInterruptHello:
 
 	
 setInterruptBirdie:
+	lda #lineBirdie
+	sta rasterLine
 	lda #<birdieIsr
 	sta $fffe
 	lda #>birdieIsr
@@ -444,9 +482,22 @@ setInterruptBirdie:
 
 
 setInterruptScroller:
+	lda #lineScroll
+	sta rasterLine
 	lda #<scrollerIsr
 	sta $fffe
 	lda #>scrollerIsr
+	sta $ffff
+
+	rts
+
+
+setInterruptBottomBorder
+	lda #lineBottomBorder
+	sta rasterLine
+	lda #<bottomBorderIsr
+	sta $fffe
+	lda #>bottomBorderIsr
 	sta $ffff
 
 	rts
