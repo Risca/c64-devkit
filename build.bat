@@ -37,5 +37,5 @@ SET table4Args=256 90 255 0 720 80 1 0
 %genosinePath%\%genosine% %table3Args% > %tablesPath%\%table3%
 %genosinePath%\%genosine% %table4Args% > %tablesPath%\%table4%
 %compilerPath%\%compiler% %compilerArgs% %buildPath%\%build% %sourcePath%\%source%
-%cruncherPath%\%cruncher% %cruncherArgs% %buildPath%\%build% %buildPath%\%build%
+rem %cruncherPath%\%cruncher% %cruncherArgs% %buildPath%\%build% %buildPath%\%build%
 %emulatorPath%\%emulator% %emulatorArgs% %buildPath%\%build%
