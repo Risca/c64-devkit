@@ -1,5 +1,6 @@
 code = $0801
 sprites = $3E00
+tables = $5000
 
 ; misc registers
 BorderColor     = $D020
@@ -37,10 +38,33 @@ SpriteI = $fe
 SpriteR = $ff
 
 line1 = 0
-line2 = 155
+line2 = 150
+
+Temp         = $64
+FrameCounter = $90
+StartupDelay = $92
+; Flag bits:
+; 0 = stop Birdie text oscillation
+Flags           = $FB
+MusicPlayerVar1 = $FC ; Used by music player - don't touch
+MusicPlayerVar2 = $FD ; Used by music player - don't touch
 
 *=sprites
 !binary "sprites/helodbir.prg",512,2
+
+*= tables
+sinTable1:
+	!source "tables/sin1.dat"
+
+sinTable2:
+	!source "tables/sin2.dat"
+	!source "tables/sin2.dat"
+
+sinTable3:
+	!source "tables/sin3.dat"
+
+sinTable4:
+	!source "tables/sin4.dat"
 
 *=code
 	; SYS2061
@@ -54,12 +78,8 @@ start:
 	jsr initIsr
 	cli
 
-_waitSpace
-	lda $DC01
-	and #$10
-	bne _waitSpace
-
-	jmp $FCE2
+main:
+	jmp main
 
 initSprites:
 	; setup sprite colors
@@ -108,6 +128,8 @@ initMisc:
 	; 25 rows, text mode
 	lda #$1b
 	sta $d011
+	lda #100
+	sta StartupDelay
 	rts
 
 initIsr:
@@ -132,6 +154,16 @@ initIsr:
 	lda #>helloIsr
 	sta $ffff
 
+	rts
+
+getFrameCounterInY:
+	lda StartupDelay
+	beq returnFrameCounter
+	dec StartupDelay
+	lda #0
+	sta FrameCounter
+returnFrameCounter:
+	ldy FrameCounter
 	rts
 
 showHello:
@@ -159,7 +191,8 @@ showHello:
 	lda #220
 	sta SP4X
 
-	lda #100
+	jsr getFrameCounterInY
+	lda sinTable1,y
 	sta SP0Y
 	sta SP1Y
 	sta SP2Y
@@ -175,6 +208,36 @@ showHello:
 	sta $d01b
 
 	rts
+
+helloIsr:
+	pha
+	txa
+	pha
+	tya
+	pha
+
+	lda #$ff
+	sta $d019
+
+	jsr showHello
+
+	inc FrameCounter
+
+	lda #line2
+	sta $d012
+
+	lda #<birdieIsr
+	sta $fffe
+	lda #>birdieIsr
+	sta $ffff
+
+	pla
+	tay
+	pla
+	tax
+	pla
+
+	rti
 
 showBirdie:
 	; Set sprite pointers
@@ -205,7 +268,49 @@ showBirdie:
 	lda #232
 	sta SP5X
 
-	lda #160
+	lda #0
+	sta Temp
+
+	; Check flags
+	lda Flags
+	and #1
+	bne setBirdeSpriteYPosition
+
+	jsr getFrameCounterInY
+	lda sinTable4,y
+	sta Temp
+
+	; adjust sine value
+	; sinTable4 is setup to reach 0 at
+	; * $20
+	; * $60
+	; * $A0
+	; * $E0
+	tya
+	cmp #$20
+	bcc setBirdeSpriteYPosition
+	clc
+	ror Temp
+	cmp #$60
+	bcc setBirdeSpriteYPosition
+	clc
+	ror Temp
+	cmp #$A0
+	bcc setBirdeSpriteYPosition
+	clc
+	ror Temp
+	cmp #$E0
+	bcc setBirdeSpriteYPosition
+	clc
+	ror Temp
+	; stop oscillating Birdie text
+	lda Flags
+	ora #1
+	sta Flags
+
+setBirdeSpriteYPosition
+	lda #230
+	sbc Temp
 	sta SP0Y
 	sta SP1Y
 	sta SP2Y
@@ -222,34 +327,6 @@ showBirdie:
 	sta $d01b
 
 	rts
-
-helloIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
-
-	lda #$ff
-	sta $d019
-	
-	jsr showHello
-
-	lda #line2
-	sta $d012
-
-	lda #<birdieIsr
-	sta $fffe
-	lda #>birdieIsr
-	sta $ffff
-
-	pla
-	tay
-	pla
-	tax
-	pla
-
-	rti
 
 birdieIsr:
 	pha

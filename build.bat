@@ -27,7 +27,7 @@ SET table2Args=256 0 255 0 180 20 3 1
 SET table3=sin3.dat
 SET table3Args=256 80 255 0 360 60 2 1
 SET table4=sin4.dat
-SET table4Args=256 90 255 0 720 80 1 0
+SET table4Args=256 0 70 0 360 100 3 1
 
 %clean% %cleanArgs% %buildPath%\*.*
 %clean% %cleanArgs% %tablesPath%\*.*
