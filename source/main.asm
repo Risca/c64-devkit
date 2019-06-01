@@ -278,7 +278,7 @@ scrollNext:
 	lda #$01
 	sta colors+40*10,x
 	inx
-	cpx #53
+	cpx #55
 	bne scrollNext
 
 	rts
@@ -632,7 +632,7 @@ setInterruptBottomBorder
 
 
 scrollerText:
-	!scr "ABCDEFGHIJKLMNOPQRSTUVXYZ abcdefghijklmnopqrstuvwxyz"
+	!scr "DEMO @ Birdie 29 by Risca and FireArrow. Music by Hexeh"
 
 
 textMode:
