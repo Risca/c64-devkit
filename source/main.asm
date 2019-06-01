@@ -110,7 +110,7 @@ start:
 	cli
 
 main:
-	jsr scrollText
+	jsr textMode
 	jmp main
 
 
@@ -511,16 +511,14 @@ scrollerIsr:
 	tya
 	pha
 
-	dec BorderColor
+	lda #$0D
+	ldx #$06
+	sta BorderColor
+	stx BackgroundColor
 
 	lda #$ff
 	sta $d019
 
-	ldx #$ff
-dl1:
-	dex
-	bne dl1
-	
 	jsr scrollText
 
 	jsr setInterruptBirdie
