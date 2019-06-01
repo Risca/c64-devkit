@@ -46,7 +46,7 @@ SpriteB = $fd
 SpriteI = $fe
 SpriteR = $ff
 
-lineHello = 0
+lineBootstrap = 0
 lineScroll = 70
 lineBirdie = 150
 lineBottomBorder = 249
@@ -83,6 +83,18 @@ sinTable4:
 
 *=music
 	!binary "music/mandelvogel.sid",,$7e
+
+rasterColor:
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
 
 *=code
 	; SYS2061
@@ -178,7 +190,7 @@ initIsr:
 	lda #$01
 	sta $d01a
 
-	jsr setInterruptHello
+	jsr setInterruptBootstrap
 
 	rts
 
@@ -393,15 +405,84 @@ setBirdieSpriteYPos:
 	rts
 
 
-helloIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
+bootstrapIsr:
+	; self-modifying code - end of helloIsr will execute "ld{a,x,y} <reseta1+1>"
+	sta reseta1+1
+	stx resetx1+1
+	sty resety1+1
 
-	lda #$ff
-	sta $d019
+	lda #<helloIsr
+	ldx #>helloIsr
+
+	sta $fffe
+	stx $ffff
+	inc rasterLine
+	asl $d019
+	tsx
+	; enable interrupts and perform nops until the next interrupt hits
+	cli
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+
+helloIsr:
+	txs ; we came here from bootstrapIsr, restore stack pointer
+
+	ldx #6 ; wait exactly 6 * (2+3) cycles so our raster line is in the border
+	dex
+	bne *-1 ; hacky syntax
+
+	; delay 5 lines
+	ldx #63
+	dex
+	bne *-1
+
+	; delay 5 lines
+	ldx #63
+	dex
+	bne *-1
+
+	; delay 5 lines
+	ldx #63
+	dex
+	bne *-1
+
+	ldx #0
+nextRasterLine:
+	txa
+	adc FrameCounter
+	and #$7F
+	tay
+	lda rasterColor,y
+	sta BackgroundColor
+	sta BorderColor
+
+	ldy #5
+rasterDelayLoop:
+	dey
+	bne rasterDelayLoop
+
+	nop
+	nop
+	cmp $EA
+
+	inx
+	txa
+	cmp #20
+	bne nextRasterLine
+
+	nop
+	nop
+
+	lda #$0E
+	sta BorderColor
+	lda #$06
+	sta BackgroundColor
 
 	jsr showHello
 
@@ -410,11 +491,15 @@ helloIsr:
 
 	jsr setInterruptScroller
 
-	pla
-	tay
-	pla
-	tax
-	pla
+	lda #$ff
+	sta $d019
+
+reseta1:
+	lda #$00
+resetx1:
+	ldx #$00
+resety1:
+	ldy #$00
 
 	rti
 
@@ -502,7 +587,7 @@ bottomBorderIsr:
 skipHack:
 
 	jsr musicPlay
-	jsr setInterruptHello
+	jsr setInterruptBootstrap
 
 	; Set 25 rows (revert hack in before)
 	lda $D011
@@ -520,17 +605,17 @@ skipHack:
 	rti
 
 
-setInterruptHello:
-	lda #lineHello
+setInterruptBootstrap:
+	lda #lineBootstrap
 	sta rasterLine
-	lda #<helloIsr
+	lda #<bootstrapIsr
 	sta $fffe
-	lda #>helloIsr
+	lda #>bootstrapIsr
 	sta $ffff
 
 	rts
 
-	
+
 setInterruptBirdie:
 	lda #lineBirdie
 	sta rasterLine
