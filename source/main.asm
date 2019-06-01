@@ -518,7 +518,10 @@ rasterDelayLoop:
 	bne nextRasterLine
 
 	nop
-	cmp Temp ; 3 cycle delay
+	nop
+	nop
+	nop
+	nop
 
 	lda #0
 	sta BorderColor
