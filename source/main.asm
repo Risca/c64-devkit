@@ -47,7 +47,7 @@ SpriteI = $fe
 SpriteR = $ff
 
 lineBootstrap = 0
-lineScroll = 70
+lineScroll = 60
 lineBirdie = 150
 lineBottomBorder = 249
 
@@ -65,6 +65,7 @@ TransitionCounter = $3
 Flags           = $FB
 MusicPlayerVar1 = $FC ; Used by music player - don't touch
 MusicPlayerVar2 = $FD ; Used by music player - don't touch
+CurrentBorderColor = $91
 
 
 *=sprites
@@ -178,6 +179,8 @@ initMisc:
 	sta ScrollOffset
 	sta SmoothScroll
 	sta Flags
+	lda #$0E
+	sta CurrentBorderColor
 
 	rts
 
@@ -370,6 +373,9 @@ showBirdie:
 	lda Flags
 	ora #2 ; remove border
 	sta Flags
+	lda #0
+	sta CurrentBorderColor
+
 calculateSpritePositionInBorder
 	lda #$FF
 	clc
@@ -518,8 +524,9 @@ rasterDelayLoop:
 	nop
 	nop
 
-	lda #0
+	lda CurrentBorderColor
 	sta BorderColor
+	lda #0
 	sta BackgroundColor
 
 	jsr showHello
