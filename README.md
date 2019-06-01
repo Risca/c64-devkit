@@ -157,7 +157,7 @@ Branch back to the label loop if it is not equal to 40.
 
 Another label for a memory location.
 
-`jsr wait`
+`jmp wait`
 
 Jump to subroutine wait. Basically, an infinite loop.
 
