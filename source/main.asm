@@ -55,8 +55,11 @@ Temp         = $64
 FrameCounter = $90
 StartupDelayHigh = $92
 StartupDelayLow  = $93
+TransitionCounter = $3
+
 ; Flag bits:
 ; 0 = stop Birdie text oscillation
+; 1 = remove top/bottom border
 Flags           = $FB
 MusicPlayerVar1 = $FC ; Used by music player - don't touch
 MusicPlayerVar2 = $FD ; Used by music player - don't touch
@@ -155,6 +158,8 @@ initMisc:
 	sta StartupDelayHigh
 	lda #$58
 	sta StartupDelayLow
+	lda #0
+	sta Flags
 
 	rts
 
@@ -267,6 +272,14 @@ scrollNext:
 	rts
 
 
+decreaseTransitionCounter:
+	lda TransitionCounter
+	beq transitionCounterAlreadyZero:
+	dec TransitionCounter
+transitionCounterAlreadyZero:
+	rts
+
+
 showBirdie:
 	; Set sprite pointers
 	lda #SpriteB
@@ -296,13 +309,32 @@ showBirdie:
 	lda #232
 	sta SP5X
 
-	lda #0
-	sta Temp
-
 	; Check flags
 	lda Flags
 	and #1
-	bne setBirdeSpriteYPosition
+	beq noTransitionEffect
+
+	jsr decreaseTransitionCounter
+
+	lda TransitionCounter
+	cmp #25
+	bcs noTransitionEffect
+	lda Flags
+	ora #2 ; remove border
+	sta Flags
+calculateSpritePositionInBorder
+	lda #$FF
+	clc
+	sbc TransitionCounter
+	jmp setBirdieSpriteYPos
+noTransitionEffect:
+
+	lda #0
+	sta Temp
+
+	lda Flags
+	and #1
+	bne calculateSpritePositionAboveBorder
 
 	jsr getFrameCounterInY
 	lda sinTable4,y
@@ -316,29 +348,33 @@ showBirdie:
 	; * $E0
 	tya
 	cmp #$20
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	cmp #$60
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	cmp #$A0
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	cmp #$E0
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	; stop oscillating Birdie text
 	lda Flags
 	ora #1
 	sta Flags
+	lda #$FF
+	sta TransitionCounter
 
-setBirdeSpriteYPosition
+calculateSpritePositionAboveBorder:
 	lda #230
 	sbc Temp
+
+setBirdieSpriteYPos:
 	sta SP0Y
 	sta SP1Y
 	sta SP2Y
@@ -455,10 +491,15 @@ bottomBorderIsr:
 	lda #$ff
 	sta $d019
 
+	lda Flags
+	and #2
+	beq skipHack
+
 	; Set 24 rows
 	lda $D011
 	and #$F7
 	sta $D011
+skipHack:
 
 	jsr musicPlay
 	jsr setInterruptHello
