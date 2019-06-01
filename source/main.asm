@@ -98,7 +98,7 @@ start:
 	cli
 
 main:
-	jsr scrollText
+	jsr textMode
 	jmp main
 
 
@@ -147,6 +147,7 @@ initMem:
 	lda #$00
 	sta $3FFF
 
+
 	rts
 
 
@@ -190,7 +191,7 @@ getFrameCounterInY:
 	lda StartupDelayHigh
 	beq returnFrameCounter
 zeroFrameCounter:
-	ldy #0
+	ldy #1
 	sty FrameCounter
 returnFrameCounter:
 	ldy FrameCounter
@@ -258,50 +259,53 @@ showHello:
 
 
 scrollText:
-	; Put some text
-	jsr textMode
-	ldx #02
-	ldy ScrollOffset
+;	; update counters every Nth frame
+;	lda FrameCounter
+;	and #%00011100
+;	bne scrollDone
+
+
+	; Smooth scrolling
+	lda SmoothScroll
+	and #%00000111
+	sta SmoothScroll
+	bne scrollDone
+
+scrollText2:
+	ldx #03 ;from
+	ldy #02 ;to
 scrollNext:
 	; Write char and color to screen
-	lda scrollerText,y
-	sta screen+40*10,x
-	lda #$01
-	sta colors+40*10,x
+	lda screen+40*10,x
+	sta screen+40*10,y
+	lda #01
+	sta colors+40*10,y
 
-	; Next char
+	; increment counters
 	inx
 	iny
 
 	; Out of viewport?
-	cpx #38
+	cpx #37
 	bmi scrollNext
 	
-	; Smooth scrolling
-	lda $d016
-	and #%1111000
-	adc SmoothScroll
-	sta $d016
-
-	; update smooth scolling counter
-	inc SmoothScroll
-	ldx SmoothScroll
-	cpx #08
-	bmi scrollDone
-
-	; Time to roll
-	ldx #00
-	stx SmoothScroll
-
 	; update coarse scolling counter
 	inc ScrollOffset
 	ldx ScrollOffset
-	cpx #100
-	bmi scrollDone
+	cpx #120
+	bmi scrollDrawLetter
 	ldx #02
 	stx ScrollOffset
 
+scrollDrawLetter:
+	; Grab new letter from text
+	lda scrollerText,x
+	; Store new letter to screen
+	sta screen+40*10,y
+
 scrollDone:
+	; update smooth scolling counter
+	dec SmoothScroll
 	rts
 
 
@@ -557,11 +561,12 @@ setInterruptBottomBorder
 
 
 scrollerText:
-	!scr "                                          Hello Birdie!            This is a n00b C64 demo           We are really proud of it!"
+	!scr "                                          Hello Birdie!            This is a n00b C64 demo           We are really proud of it!                              "
 
 
 textMode:
 	lda #%11001000
+	adc SmoothScroll
 	sta $d016
 
 	lda #%00011011
