@@ -275,16 +275,11 @@ showHello:
 
 
 scrollText:
-;	; update counters every Nth frame
-;	lda FrameCounter
-;	and #%00011100
-;	bne scrollDone
-
-
 	; Smooth scrolling
 	lda SmoothScroll
 	and #%00000111
 	sta SmoothScroll
+	cmp #07
 	bne scrollDone
 
 scrollText2:
