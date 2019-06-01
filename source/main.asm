@@ -479,9 +479,8 @@ rasterDelayLoop:
 	nop
 	nop
 
-	lda #$0E
+	lda #0
 	sta BorderColor
-	lda #$06
 	sta BackgroundColor
 
 	jsr showHello
@@ -511,19 +510,12 @@ scrollerIsr:
 	tya
 	pha
 
-	lda #$0D
-	ldx #$06
-	sta BorderColor
-	stx BackgroundColor
-
 	lda #$ff
 	sta $d019
 
 	jsr scrollText
 
 	jsr setInterruptBirdie
-
-	inc BorderColor
 
 	pla
 	tay
@@ -541,8 +533,6 @@ birdieIsr:
 	tya
 	pha
 
-	inc BorderColor
-
 	lda #$ff
 	sta $d019
 
@@ -550,8 +540,6 @@ birdieIsr:
 	jsr musicPlay
 
 	jsr setInterruptBottomBorder
-
-	dec BorderColor
 
 	pla
 	tay
@@ -568,8 +556,6 @@ bottomBorderIsr:
 	pha
 	tya
 	pha
-
-	inc BorderColor
 
 	lda #$ff
 	sta $d019
@@ -591,8 +577,6 @@ skipHack:
 	lda $D011
 	ora #$08
 	sta $D011
-
-	dec BorderColor
 
 	pla
 	tay
