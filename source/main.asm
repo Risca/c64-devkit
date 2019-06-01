@@ -46,7 +46,7 @@ SpriteB = $fd
 SpriteI = $fe
 SpriteR = $ff
 
-lineHello = 0
+lineBootstrap = 0
 lineScroll = 70
 lineBirdie = 150
 lineBottomBorder = 249
@@ -57,8 +57,11 @@ Temp         = $64
 FrameCounter = $90
 StartupDelayHigh = $92
 StartupDelayLow  = $93
+TransitionCounter = $3
+
 ; Flag bits:
 ; 0 = stop Birdie text oscillation
+; 1 = remove top/bottom border
 Flags           = $FB
 MusicPlayerVar1 = $FC ; Used by music player - don't touch
 MusicPlayerVar2 = $FD ; Used by music player - don't touch
@@ -83,6 +86,18 @@ sinTable4:
 
 *=music
 	!binary "music/mandelvogel.sid",,$7e
+
+rasterColor:
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
+	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
+	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
 
 *=code
 	; SYS2061
@@ -162,6 +177,7 @@ initMisc:
 	lda #00
 	sta ScrollOffset
 	sta SmoothScroll
+	sta Flags
 
 	rts
 
@@ -180,7 +196,7 @@ initIsr:
 	lda #$01
 	sta $d01a
 
-	jsr setInterruptHello
+	jsr setInterruptBootstrap
 
 	rts
 
@@ -292,9 +308,9 @@ scrollNext:
 	; update coarse scolling counter
 	inc ScrollOffset
 	ldx ScrollOffset
-	cpx #120
+	cpx #128
 	bmi scrollDrawLetter
-	ldx #02
+	ldx #00
 	stx ScrollOffset
 
 scrollDrawLetter:
@@ -306,6 +322,14 @@ scrollDrawLetter:
 scrollDone:
 	; update smooth scolling counter
 	dec SmoothScroll
+	rts
+
+
+decreaseTransitionCounter:
+	lda TransitionCounter
+	beq transitionCounterAlreadyZero:
+	dec TransitionCounter
+transitionCounterAlreadyZero:
 	rts
 
 
@@ -338,13 +362,32 @@ showBirdie:
 	lda #232
 	sta SP5X
 
-	lda #0
-	sta Temp
-
 	; Check flags
 	lda Flags
 	and #1
-	bne setBirdeSpriteYPosition
+	beq noTransitionEffect
+
+	jsr decreaseTransitionCounter
+
+	lda TransitionCounter
+	cmp #25
+	bcs noTransitionEffect
+	lda Flags
+	ora #2 ; remove border
+	sta Flags
+calculateSpritePositionInBorder
+	lda #$FF
+	clc
+	sbc TransitionCounter
+	jmp setBirdieSpriteYPos
+noTransitionEffect:
+
+	lda #0
+	sta Temp
+
+	lda Flags
+	and #1
+	bne calculateSpritePositionAboveBorder
 
 	jsr getFrameCounterInY
 	lda sinTable4,y
@@ -358,29 +401,33 @@ showBirdie:
 	; * $E0
 	tya
 	cmp #$20
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	cmp #$60
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	cmp #$A0
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	cmp #$E0
-	bcc setBirdeSpriteYPosition
+	bcc calculateSpritePositionAboveBorder
 	clc
 	ror Temp
 	; stop oscillating Birdie text
 	lda Flags
 	ora #1
 	sta Flags
+	lda #$FF
+	sta TransitionCounter
 
-setBirdeSpriteYPosition
+calculateSpritePositionAboveBorder:
 	lda #230
 	sbc Temp
+
+setBirdieSpriteYPos:
 	sta SP0Y
 	sta SP1Y
 	sta SP2Y
@@ -399,15 +446,83 @@ setBirdeSpriteYPosition
 	rts
 
 
-helloIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
+bootstrapIsr:
+	; self-modifying code - end of helloIsr will execute "ld{a,x,y} <reseta1+1>"
+	sta reseta1+1
+	stx resetx1+1
+	sty resety1+1
 
-	lda #$ff
-	sta $d019
+	lda #<helloIsr
+	ldx #>helloIsr
+
+	sta $fffe
+	stx $ffff
+	inc rasterLine
+	asl $d019
+	tsx
+	; enable interrupts and perform nops until the next interrupt hits
+	cli
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+
+helloIsr:
+	txs ; we came here from bootstrapIsr, restore stack pointer
+
+	ldx #6 ; wait exactly 6 * (2+3) cycles so our raster line is in the border
+	dex
+	bne *-1 ; hacky syntax
+
+	; delay 5 lines
+	ldx #63
+	dex
+	bne *-1
+
+	; delay 5 lines
+	ldx #63
+	dex
+	bne *-1
+
+	; delay 5 lines
+	ldx #63
+	dex
+	bne *-1
+
+	ldx #0
+nextRasterLine:
+	txa
+	adc FrameCounter
+	and #$7F
+	tay
+	lda rasterColor,y
+	sta BackgroundColor
+	sta BorderColor
+
+	ldy #5
+rasterDelayLoop:
+	dey
+	bne rasterDelayLoop
+
+	nop
+	nop
+	cmp Temp ; 3 cycle delay
+
+	inx
+	txa
+	cmp #20
+	bne nextRasterLine
+
+	nop
+	cmp Temp ; 3 cycle delay
+
+	lda #0
+	sta BorderColor
+	sta BackgroundColor
 
 	jsr showHello
 
@@ -416,11 +531,15 @@ helloIsr:
 
 	jsr setInterruptScroller
 
-	pla
-	tay
-	pla
-	tax
-	pla
+	lda #$ff
+	sta $d019
+
+reseta1:
+	lda #$00
+resetx1:
+	ldx #$00
+resety1:
+	ldy #$00
 
 	rti
 
@@ -432,16 +551,12 @@ scrollerIsr:
 	tya
 	pha
 
-	dec BorderColor
-
 	lda #$ff
 	sta $d019
-	
+
 	jsr scrollText
 
 	jsr setInterruptBirdie
-
-	inc BorderColor
 
 	pla
 	tay
@@ -459,8 +574,6 @@ birdieIsr:
 	tya
 	pha
 
-	inc BorderColor
-
 	lda #$ff
 	sta $d019
 
@@ -468,8 +581,6 @@ birdieIsr:
 	jsr musicPlay
 
 	jsr setInterruptBottomBorder
-
-	dec BorderColor
 
 	pla
 	tay
@@ -487,25 +598,26 @@ bottomBorderIsr:
 	tya
 	pha
 
-	inc BorderColor
-
 	lda #$ff
 	sta $d019
+
+	lda Flags
+	and #2
+	beq skipHack
 
 	; Set 24 rows
 	lda $D011
 	and #$F7
 	sta $D011
+skipHack:
 
 	jsr musicPlay
-	jsr setInterruptHello
+	jsr setInterruptBootstrap
 
 	; Set 25 rows (revert hack in before)
 	lda $D011
 	ora #$08
 	sta $D011
-
-	dec BorderColor
 
 	pla
 	tay
@@ -516,17 +628,17 @@ bottomBorderIsr:
 	rti
 
 
-setInterruptHello:
-	lda #lineHello
+setInterruptBootstrap:
+	lda #lineBootstrap
 	sta rasterLine
-	lda #<helloIsr
+	lda #<bootstrapIsr
 	sta $fffe
-	lda #>helloIsr
+	lda #>bootstrapIsr
 	sta $ffff
 
 	rts
 
-	
+
 setInterruptBirdie:
 	lda #lineBirdie
 	sta rasterLine
@@ -561,7 +673,7 @@ setInterruptBottomBorder
 
 
 scrollerText:
-	!scr "                                          Hello Birdie!            This is a n00b C64 demo           We are really proud of it!                              "
+	!scr "                         This is a n00b C64 demo           We are really proud of it (and super jittery from no sleep!)                              Created @ Birdie 29 by Risca and FireArrow. Music by Hexeh                             "
 
 
 textMode:
