@@ -51,6 +51,8 @@ lineScroll = 70
 lineBirdie = 150
 lineBottomBorder = 249
 
+ScrollOffset = $fe
+SmoothScroll = $02
 Temp         = $64
 FrameCounter = $90
 StartupDelayHigh = $92
@@ -60,6 +62,7 @@ StartupDelayLow  = $93
 Flags           = $FB
 MusicPlayerVar1 = $FC ; Used by music player - don't touch
 MusicPlayerVar2 = $FD ; Used by music player - don't touch
+
 
 *=sprites
 	!binary "sprites/helodbir.prg",512,2
@@ -155,6 +158,9 @@ initMisc:
 	sta StartupDelayHigh
 	lda #$58
 	sta StartupDelayLow
+	lda #00
+	sta ScrollOffset
+	sta SmoothScroll
 
 	rts
 
@@ -254,16 +260,48 @@ showHello:
 scrollText:
 	; Put some text
 	jsr textMode
-	ldx #$00
+	ldx #02
+	ldy ScrollOffset
 scrollNext:
-	lda scrollerText,x
+	; Write char and color to screen
+	lda scrollerText,y
 	sta screen+40*10,x
 	lda #$01
 	sta colors+40*10,x
-	inx
-	cpx #53
-	bne scrollNext
 
+	; Next char
+	inx
+	iny
+
+	; Out of viewport?
+	cpx #38
+	bmi scrollNext
+	
+	; Smooth scrolling
+	lda $d016
+	and #%1111000
+	adc SmoothScroll
+	sta $d016
+
+	; update smooth scolling counter
+	inc SmoothScroll
+	ldx SmoothScroll
+	cpx #08
+	bmi scrollDone
+
+	; Time to roll
+	ldx #00
+	stx SmoothScroll
+
+	; update coarse scolling counter
+	inc ScrollOffset
+	ldx ScrollOffset
+	cpx #100
+	bmi scrollDone
+	ldx #02
+	stx ScrollOffset
+
+scrollDone:
 	rts
 
 
@@ -394,11 +432,6 @@ scrollerIsr:
 
 	lda #$ff
 	sta $d019
-
-	ldx #$ff
-dl1:
-	dex
-	bne dl1
 	
 	jsr scrollText
 
@@ -524,7 +557,7 @@ setInterruptBottomBorder
 
 
 scrollerText:
-	!scr "ABCDEFGHIJKLMNOPQRSTUVXYZ abcdefghijklmnopqrstuvwxyz"
+	!scr "                                          Hello Birdie!            This is a n00b C64 demo           We are really proud of it!"
 
 
 textMode:
