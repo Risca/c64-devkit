@@ -7,8 +7,6 @@ code = $0801
 sprites = $3E00
 tables = $5000
 charset = $3800
-music = $6FF6
-musicPlay = $7003
 
 char_H = $f8
 char_E = $f9
@@ -58,7 +56,18 @@ sinTable3:
 sinTable4:
 	!source "tables/sin4.dat"
 
+music     = $6FF6 ; extracted from mandelvogel.sid @ $0A and $7C
+musicPlay = $7003 ; extracted from mandelvogel.sid @ $0C
+; Additional info from mandelvogel.sid:
+; * Name: MandelVogel
+; * Author: Hexeh
+; * Released: 2019
+; * has builtin music player
+; * is C64 compatible
+; * made for PAL systems
+; * SID version: MOS6581
 *=music
+	; data begins at $7C, but first 2 bytes is the load addres ($6FF6)
 	!binary "music/mandelvogel.sid",,$7e
 
 rasterColor:
