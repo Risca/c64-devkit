@@ -1,3 +1,8 @@
+; =============
+; Include files
+; =============
+!source "source/regs.asm"
+
 code = $0801
 sprites = $3E00
 tables = $5000
@@ -5,46 +10,14 @@ charset = $3800
 music = $6FF6
 musicPlay = $7003
 
-; misc registers
-BorderColor     = $D020
-BackgroundColor = $D021
-
-; sprite registers
-spritePointer = $07F8
-spriteEnable = $D015
-
-; screen stuff
-screen = $0400
-colors = $d800
-rasterLine = $d012
-
-
-; sprite position registers
-SP0X = $D000
-SP0Y = $D001
-SP1X = $D002
-SP1Y = $D003
-SP2X = $D004
-SP2Y = $D005
-SP3X = $D006
-SP3Y = $D007
-SP4X = $D008
-SP4Y = $D009
-SP5X = $D00a
-SP5Y = $D00b
-SP6X = $D00c
-SP6Y = $D00d
-SP7X = $D00e
-SP7Y = $D00f
-
-SpriteH = $f8
-SpriteE = $f9
-SpriteL = $fa
-SpriteO = $fb
-SpriteD = $fc
-SpriteB = $fd
-SpriteI = $fe
-SpriteR = $ff
+char_H = $f8
+char_E = $f9
+char_L = $fa
+char_O = $fb
+char_D = $fc
+char_B = $fd
+char_I = $fe
+char_R = $ff
 
 lineBootstrap = 0
 lineScroll = 60
@@ -71,7 +44,7 @@ CurrentBorderColor = $91
 *=sprites
 	!binary "sprites/helodbir.prg",512,2
 
-*= tables
+*=tables
 sinTable1:
 	!source "tables/sin1.dat"
 
@@ -104,11 +77,11 @@ rasterColor:
 	; SYS2061
 	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $31, $00, $00, $00
 start:
-	jsr $e544		;clear screen
+	jsr $e544    ;clear screen
 	sei
-	jsr initSprites		;set up sprites
-	jsr initMem		;set up memory mapping
-	jsr initMisc		;
+	jsr initSprites    ;set up sprites
+	jsr initMem    ;set up memory mapping
+	jsr initMisc    ;
 	jsr music
 	jsr initIsr
 	cli
@@ -121,44 +94,49 @@ main:
 initSprites:
 	; setup sprite colors
 	lda #$01
-	sta $d025
+	sta SPRITE_MM0
 	lda #$06
-	sta $d026
+	sta SPRITE_MM1
 	lda #$01
-	sta $d027
-	sta $d028
-	sta $d029
-	sta $d02a
-	sta $d02b
-	sta $d02c
-	sta $d02d
-	sta $d02e
+	sta SPRITE_0_COLOR
+	sta SPRITE_1_COLOR
+	sta SPRITE_2_COLOR
+	sta SPRITE_3_COLOR
+	sta SPRITE_4_COLOR
+	sta SPRITE_5_COLOR
+	sta SPRITE_6_COLOR
+	sta SPRITE_7_COLOR
 
 	; control multicolor mode (1=multicolor, 0=hi-res)
 	lda #%00000000
-	sta $d01c
+	sta SPRITE_MM_ENABLE
 
 	; sprite expansion (1=double, 0=normal)
 	lda #%00000000
-	sta $d01d ; horizontal
-	sta $d017 ; vertical
-	
+	sta SPRITE_X_EXPAND ; horizontal
+	sta SPRITE_Y_EXPAND ; vertical
+
 	; clear bit 8 of all sprite X positions
 	lda #%00000000
-	sta $d010
+	sta SPRITE_X_MSB
 
 	rts
 
 
 initMem:
+	; [1:3]: A11-13 of charset (*2048)
+	; [4:7]: A10-13 of screen RAM (*1024)
+	; $1800-$1FFF: character memory (in text mode)
+	; $0400-$07FF: Screen memory
 	lda #%00010110
-	sta $d018
+	sta VIC2_MEM_MAP
+
 	; $A000-$BFFF: RAM
 	; $D000-$DFFF: I/O
 	; $E000-$FFFF: RAM
 	; No ROM
 	lda #%00110101
-	sta $01
+	sta PORT_CONFIG
 	; no idea - removes artifacts on bottom border
 	lda #$00
 	sta $3FFF
@@ -170,7 +148,7 @@ initMem:
 initMisc:
 	; 25 rows, text mode
 	lda #$1b
-	sta $d011
+	sta VIC_CONTROL_1
 	lda #$02
 	sta StartupDelayHigh
 	lda #$58
@@ -235,40 +213,40 @@ decreaseDelayDone:
 
 showHello:
 	; Set sprite pointers
-	lda #SpriteH
-	sta spritePointer+0
-	lda #SpriteE
-	sta spritePointer+1
-	lda #SpriteL
-	sta spritePointer+2
-	lda #SpriteL
-	sta spritePointer+3
-	lda #SpriteO
-	sta spritePointer+4
+	lda #char_H
+	sta SPRITES+0
+	lda #char_E
+	sta SPRITES+1
+	lda #char_L
+	sta SPRITES+2
+	lda #char_L
+	sta SPRITES+3
+	lda #char_O
+	sta SPRITES+4
 
 	; move sprites
 	lda #124
-	sta SP0X
+	sta SPRITE_0_X
 	lda #148
-	sta SP1X
+	sta SPRITE_1_X
 	lda #172
-	sta SP2X
+	sta SPRITE_2_X
 	lda #196
-	sta SP3X
+	sta SPRITE_3_X
 	lda #220
-	sta SP4X
+	sta SPRITE_4_X
 
 	jsr getFrameCounterInY
 	lda sinTable1,y
-	sta SP0Y
-	sta SP1Y
-	sta SP2Y
-	sta SP3Y
-	sta SP4Y
+	sta SPRITE_0_Y
+	sta SPRITE_1_Y
+	sta SPRITE_2_Y
+	sta SPRITE_3_Y
+	sta SPRITE_4_Y
 
 	; enable sprites
 	lda #%00011111
-	sta spriteEnable
+	sta SPRITE_ENABLE
 
 	; set sprite priority (0=foreground, 1=background)
 	lda #%11100000
@@ -290,10 +268,10 @@ scrollText2:
 	ldy #02 ;to
 scrollNext:
 	; Write char and color to screen
-	lda screen+40*10,x
-	sta screen+40*10,y
+	lda SCREEN+40*10,x
+	sta SCREEN+40*10,y
 	lda #01
-	sta colors+40*10,y
+	sta COLORS+40*10,y
 
 	; increment counters
 	inx
@@ -315,7 +293,7 @@ scrollDrawLetter:
 	; Grab new letter from text
 	lda scrollerText,x
 	; Store new letter to screen
-	sta screen+40*10,y
+	sta SCREEN+40*10,y
 
 scrollDone:
 	; update smooth scolling counter
@@ -333,32 +311,32 @@ transitionCounterAlreadyZero:
 
 showBirdie:
 	; Set sprite pointers
-	lda #SpriteB
-	sta spritePointer+0
-	lda #SpriteI
-	sta spritePointer+1
-	lda #SpriteR
-	sta spritePointer+2
-	lda #SpriteD
-	sta spritePointer+3
-	lda #SpriteI
-	sta spritePointer+4
-	lda #SpriteE
-	sta spritePointer+5
+	lda #char_B
+	sta SPRITES+0
+	lda #char_I
+	sta SPRITES+1
+	lda #char_R
+	sta SPRITES+2
+	lda #char_D
+	sta SPRITES+3
+	lda #char_I
+	sta SPRITES+4
+	lda #char_E
+	sta SPRITES+5
 
 	; move sprites
 	lda #114
-	sta SP0X
+	sta SPRITE_0_X
 	lda #136
-	sta SP1X
+	sta SPRITE_1_X
 	lda #160
-	sta SP2X
+	sta SPRITE_2_X
 	lda #184
-	sta SP3X
+	sta SPRITE_3_X
 	lda #208
-	sta SP4X
+	sta SPRITE_4_X
 	lda #232
-	sta SP5X
+	sta SPRITE_5_X
 
 	; Check flags
 	lda Flags
@@ -429,16 +407,16 @@ calculateSpritePositionAboveBorder:
 	sbc Temp
 
 setBirdieSpriteYPos:
-	sta SP0Y
-	sta SP1Y
-	sta SP2Y
-	sta SP3Y
-	sta SP4Y
-	sta SP5Y
+	sta SPRITE_0_Y
+	sta SPRITE_1_Y
+	sta SPRITE_2_Y
+	sta SPRITE_3_Y
+	sta SPRITE_4_Y
+	sta SPRITE_5_Y
 
 	; enable sprites
 	lda #%00111111
-	sta spriteEnable
+	sta SPRITE_ENABLE
 
 	; set sprite priority (0=foreground, 1=background)
 	lda #%11000000
@@ -458,8 +436,9 @@ bootstrapIsr:
 
 	sta $fffe
 	stx $ffff
-	inc rasterLine
-	asl $d019
+	inc RASTER
+	; hacky way to clear bit#7: asl writes the original value before shift
+	asl INTREQ
 	tsx
 	; enable interrupts and perform nops until the next interrupt hits
 	cli
@@ -501,8 +480,8 @@ nextRasterLine:
 	and #$7F
 	tay
 	lda rasterColor,y
-	sta BackgroundColor
-	sta BorderColor
+	sta BACKGROUND_COLOR
+	sta BORDER_COLOR
 
 	ldy #5
 rasterDelayLoop:
@@ -525,9 +504,9 @@ rasterDelayLoop:
 	nop
 
 	lda CurrentBorderColor
-	sta BorderColor
+	sta BORDER_COLOR
 	lda #0
-	sta BackgroundColor
+	sta BACKGROUND_COLOR
 
 	jsr showHello
 
@@ -537,7 +516,7 @@ rasterDelayLoop:
 	jsr setInterruptScroller
 
 	lda #$ff
-	sta $d019
+	sta INTREQ
 
 reseta1:
 	lda #$00
@@ -557,7 +536,7 @@ scrollerIsr:
 	pha
 
 	lda #$ff
-	sta $d019
+	sta INTREQ
 
 	jsr scrollText
 
@@ -580,7 +559,7 @@ birdieIsr:
 	pha
 
 	lda #$ff
-	sta $d019
+	sta INTREQ
 
 	jsr showBirdie
 	jsr musicPlay
@@ -604,25 +583,25 @@ bottomBorderIsr:
 	pha
 
 	lda #$ff
-	sta $d019
+	sta INTREQ
 
 	lda Flags
 	and #2
 	beq skipHack
 
 	; Set 24 rows
-	lda $D011
+	lda VIC_CONTROL_1
 	and #$F7
-	sta $D011
+	sta VIC_CONTROL_1
 skipHack:
 
 	jsr musicPlay
 	jsr setInterruptBootstrap
 
 	; Set 25 rows (revert hack in before)
-	lda $D011
+	lda VIC_CONTROL_1
 	ora #$08
-	sta $D011
+	sta VIC_CONTROL_1
 
 	pla
 	tay
@@ -635,7 +614,7 @@ skipHack:
 
 setInterruptBootstrap:
 	lda #lineBootstrap
-	sta rasterLine
+	sta RASTER
 	lda #<bootstrapIsr
 	sta $fffe
 	lda #>bootstrapIsr
@@ -646,7 +625,7 @@ setInterruptBootstrap:
 
 setInterruptBirdie:
 	lda #lineBirdie
-	sta rasterLine
+	sta RASTER
 	lda #<birdieIsr
 	sta $fffe
 	lda #>birdieIsr
@@ -657,7 +636,7 @@ setInterruptBirdie:
 
 setInterruptScroller:
 	lda #lineScroll
-	sta rasterLine
+	sta RASTER
 	lda #<scrollerIsr
 	sta $fffe
 	lda #>scrollerIsr
@@ -668,7 +647,7 @@ setInterruptScroller:
 
 setInterruptBottomBorder
 	lda #lineBottomBorder
-	sta rasterLine
+	sta RASTER
 	lda #<bottomBorderIsr
 	sta $fffe
 	lda #>bottomBorderIsr
@@ -684,19 +663,19 @@ scrollerText:
 textMode:
 	lda #%11001000
 	adc SmoothScroll
-	sta $d016
+	sta VIC_CONTROL_2
 
 	lda #%00011011
-	sta $d011
+	sta VIC_CONTROL_1
 
 	rts
 
 
 graphicsMode:
 	lda #%11011000
-	sta $d016
+	sta VIC_CONTROL_2
 
 	lda #%00111011
-	sta $d011
+	sta VIC_CONTROL_1
 
 	rts
