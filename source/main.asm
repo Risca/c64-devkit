@@ -83,10 +83,10 @@ rasterColor = $C000
 	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
 	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
 
-*=code
-	; SYS2061
+*=code  ; $0801
+	; SYS2061, i.e. run machine code at 2061 ($080D)
 	!byte $0B, $08, $0A, $00, $9E, $32, $30, $36, $31, $00, $00, $00
-start:
+start:  ; I'm $080D :)
 	jsr $e544    ;clear screen
 	sei
 	jsr initSprites    ;set up sprites
