@@ -3,7 +3,7 @@
 ; =============
 !source "source/regs.asm"
 
-code = $0801
+code = $0801 ; Default BASIC area
 sprites = $3E00
 tables = $5000
 charset = $3800
@@ -89,11 +89,11 @@ rasterColor = $C000
 start:  ; I'm $080D :)
 	jsr $e544    ;clear screen
 	sei
-	jsr initSprites    ;set up sprites
-	jsr initMem    ;set up memory mapping
-	jsr initMisc    ;
+	jsr initSprites ; set up sprites
+	jsr initMem     ; set up memory mapping
+	jsr initMisc    ; the rest
 	jsr music
-	jsr initIsr
+	jsr initIsr     ; oh, right, interrupts!
 	cli
 
 main:
