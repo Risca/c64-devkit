@@ -70,7 +70,8 @@ musicPlay = $7003 ; extracted from mandelvogel.sid @ $0C
 	; data begins at $7C, but first 2 bytes is the load addres ($6FF6)
 	!binary "music/mandelvogel.sid",,$7e
 
-rasterColor:
+rasterColor = $C000
+*=rasterColor:
 	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
 	!byte $06,$04,$0e,$05,$03,$0d,$01,$0d,$03,$05,$0e,$04,$06,$00
 	!byte $09,$02,$08,$0a,$0f,$07,$01,$07,$0f,$0a,$08,$02,$09,$00
