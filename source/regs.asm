@@ -9,6 +9,9 @@ SCREEN            = $0400 ; (depends on VIC2_MEM_MAP)
 SPRITES           = $07F8
 COLORS            = $D800
 
+ISR_LOW           = $FFFE
+ISR_HIGH          = $FFFF
+
 ; ===============
 ; VIC-2 registers
 ; ===============

@@ -441,11 +441,11 @@ bootstrapIsr:
 	stx resetx1+1
 	sty resety1+1
 
-	lda #<helloIsr
-	ldx #>helloIsr
+	lda #<helloIsr     ; [4]
+	sta ISR_LOW        ; [4]
+	lda #>helloIsr     ; ]4]
+	sta ISR_HIGH       ; [4]
 
-	sta $fffe
-	stx $ffff
 	inc RASTER
 	; hacky way to clear bit#7: asl writes the original value before shift
 	asl INTREQ
@@ -626,9 +626,9 @@ setInterruptBootstrap:
 	lda #lineBootstrap
 	sta RASTER
 	lda #<bootstrapIsr
-	sta $fffe
+	sta ISR_LOW
 	lda #>bootstrapIsr
-	sta $ffff
+	sta ISR_HIGH
 
 	rts
 
@@ -637,9 +637,9 @@ setInterruptBirdie:
 	lda #lineBirdie
 	sta RASTER
 	lda #<birdieIsr
-	sta $fffe
+	sta ISR_LOW
 	lda #>birdieIsr
-	sta $ffff
+	sta ISR_HIGH
 
 	rts
 
@@ -648,9 +648,9 @@ setInterruptScroller:
 	lda #lineScroll
 	sta RASTER
 	lda #<scrollerIsr
-	sta $fffe
+	sta ISR_LOW
 	lda #>scrollerIsr
-	sta $ffff
+	sta ISR_HIGH
 
 	rts
 
@@ -659,9 +659,9 @@ setInterruptBottomBorder
 	lda #lineBottomBorder
 	sta RASTER
 	lda #<bottomBorderIsr
-	sta $fffe
+	sta ISR_LOW
 	lda #>bottomBorderIsr
-	sta $ffff
+	sta ISR_HIGH
 
 	rts
 
