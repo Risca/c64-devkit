@@ -437,9 +437,10 @@ setBirdieSpriteYPos:
 
 bootstrapIsr:
 	; self-modifying code - end of helloIsr will execute "ld{a,x,y} <reseta1+1>"
-	sta reseta1+1
-	stx resetx1+1
-	sty resety1+1
+	; i.e. this replaces push + pop.
+	sta reseta1+1      ; [4]
+	stx resetx1+1      ; [4]
+	sty resety1+1      ; [4]
 
 	lda #<helloIsr     ; [4]
 	sta ISR_LOW        ; [4]
@@ -528,6 +529,7 @@ rasterDelayLoop:
 	lda #$ff
 	sta INTREQ
 
+	; "pop" axy from the stack
 reseta1:
 	lda #$00
 resetx1:
