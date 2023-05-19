@@ -1,7 +1,7 @@
 CLEAN=rm
 CLEANARGS=-f
 BUILDPATH=build
-BUILD=c64-devkit.prg
+BUILD=birdie_33.prg
 SOURCEPATH=source
 SOURCE=main.asm
 COMPILERPATH=compiler/linux
