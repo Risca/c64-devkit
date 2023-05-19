@@ -36,7 +36,7 @@ TransitionCounter = $3
 Flags           = $FB
 MusicPlayerVar1 = $FC ; Used by music player - don't touch
 MusicPlayerVar2 = $FD ; Used by music player - don't touch
-CurrentBorderColor = $91
+CurrBorderColor = $91
 
 
 *=sprites
@@ -168,7 +168,7 @@ initMisc:
 	sta SmoothScroll
 	sta Flags
 	lda #$0E
-	sta CurrentBorderColor
+	sta CurrBorderColor
 
 	rts
 
@@ -362,7 +362,7 @@ showBirdie:
 	ora #2 ; remove border
 	sta Flags
 	lda #0
-	sta CurrentBorderColor
+	sta CurrBorderColor
 
 calculateSpritePositionInBorder
 	lda #$FF
@@ -435,7 +435,7 @@ setBirdieSpriteYPos:
 	rts
 
 
-bootstrapIsr:
+bootstrapIsr:              ; [7]
 	; self-modifying code - end of helloIsr will execute "ld{a,x,y} <reseta1+1>"
 	; i.e. this replaces push + pop.
 	sta reseta1+1      ; [4]
@@ -447,27 +447,37 @@ bootstrapIsr:
 	lda #>helloIsr     ; ]4]
 	sta ISR_HIGH       ; [4]
 
-	inc RASTER
+	inc RASTER         ; [6]
 	; hacky way to clear bit#7: asl writes the original value before shift
-	asl INTREQ
-	tsx
+	asl INTREQ         ; [6]
+	tsx                ; [2]
 	; enable interrupts and perform nops until the next interrupt hits
-	cli
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
+	cli                ; [2]
+        ; total cycles spent [51] (= 7 + 4*7 + 6*2 + 2*2)
+	nop                ; [53]
+	nop                ; [55]
+	nop                ; [57]
+	nop                ; [59]
+	nop                ; [61]
+	nop                ; [63]
+	nop ; may be removed [65]. A raster line is at most 63 cycles long
 
 
-helloIsr:
-	txs ; we came here from bootstrapIsr, restore stack pointer
+helloIsr:                  ; [7]
+	; we came here from bootstrapIsr
+	txs ; restore stack  [2]
+	; wait exactly 6 * (2+3) - 1 cycles so our raster line is in the border
+	ldx #6             ; [2]
+	dex                ; [2]
+	bne *-1            ; [3/2]
+        ; total cycles spent [40] (= 7 + 2*2 + 5*(2+3) + (2+2))
 
-	ldx #6 ; wait exactly 6 * (2+3) cycles so our raster line is in the border
+	; We're now in the borderlands
+
+	; delay 5 lines
+	ldx #63
 	dex
-	bne *-1 ; hacky syntax
+	bne *-1
 
 	; delay 5 lines
 	ldx #63
@@ -479,45 +489,45 @@ helloIsr:
 	dex
 	bne *-1
 
-	; delay 5 lines
-	ldx #63
-	dex
-	bne *-1
-
-	ldx #0
+	; cycles right now:  [40]
+	ldx #0             ; [2]
 nextRasterLine:
-	txa
-	adc FrameCounter
-	and #$7F
-	tay
-	lda rasterColor,y
-	sta BACKGROUND_COLOR
-	sta BORDER_COLOR
+	txa                ; [2]
+	adc FrameCounter   ; [3]
+	and #$7F           ; [2]
+	tay                ; [2]
+	lda rasterColor,y  ; [4] (rasterColor is page aligned)
+	sta BACKGROUND_COLOR;[4]
+	sta BORDER_COLOR   ; [4]
+	; cycle count is now [63] in first loop
 
-	ldy #5
-rasterDelayLoop:
-	dey
-	bne rasterDelayLoop
+	; wait 2+5*(2+3)-1 = [26] cycles
+	ldy #5             ; [2]
+	dey                ; [2]
+	bne *-1            ; [3/2]
 
-	nop
-	nop
-	cmp Temp ; 3 cycle delay
+	nop                ; [2]
+	nop                ; [2]
+	cmp Temp           ; [3]
 
-	inx
-	txa
-	cmp #20
-	bne nextRasterLine
+	inx                ; [2]
+	txa                ; [2]
+	cmp #20            ; [2]
+	bne nextRasterLine ; [3/2]
+	; raster loop takes  [63] cycles
+	; we should be at    [41] cycles of current line when exiting the loop
 
-	nop
-	nop
-	nop
-	nop
-	nop
+	nop                ; [2]
+	nop                ; [2]
+	nop                ; [2]
+	nop                ; [2]
+	nop                ; [2]
+	nop                ; [2]
 
-	lda CurrentBorderColor
-	sta BORDER_COLOR
-	lda #0
-	sta BACKGROUND_COLOR
+	lda CurrBorderColor; [4]
+	sta BORDER_COLOR   ; [4]
+	lda #0             ; [2]
+	sta BACKGROUND_COLOR;[4]
 
 	jsr showHello
 
