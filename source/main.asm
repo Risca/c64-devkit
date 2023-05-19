@@ -507,14 +507,12 @@ nextRasterLine:
 	sta BORDER_COLOR   ; [4]
 	; cycle count is now [63] in first loop
 
-	; wait 2+5*(2+3)-1 = [26] cycles
-	ldy #5             ; [2]
+	; wait 2+6*(2+3)-1 = [26] cycles
+	ldy #6             ; [2]
 	dey                ; [2]
 	bne *-1            ; [3/2]
 
 	nop                ; [2]
-	nop                ; [2]
-	cmp Temp           ; [3]
 
 	inx                ; [2]
 	txa                ; [2]
