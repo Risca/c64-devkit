@@ -474,20 +474,26 @@ helloIsr:                  ; [7]
 
 	; We're now in the borderlands
 
-	; delay 5 lines
-	ldx #63
-	dex
-	bne *-1
+	; delay 5 lines: 2 + 62*5 - 1 + 2 + 2 = 5 * 63
+	ldx #62            ; [2]
+	dex                ; [2]
+	bne *-1            ; [3/2]
+	nop                ; [2]
+	nop                ; [2]
 
 	; delay 5 lines
-	ldx #63
-	dex
-	bne *-1
+	ldx #62            ; [2]
+	dex                ; [2]
+	bne *-1            ; [3/2]
+	nop                ; [2]
+	nop                ; [2]
 
 	; delay 5 lines
-	ldx #63
-	dex
-	bne *-1
+	ldx #62            ; [2]
+	dex                ; [2]
+	bne *-1            ; [3/2]
+	nop                ; [2]
+	nop                ; [2]
 
 	; cycles right now:  [40]
 	ldx #0             ; [2]
