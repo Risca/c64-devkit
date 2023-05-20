@@ -451,15 +451,15 @@ setBirdieSpriteYPos:
 
 
 bootstrapIsr:              ; [7]
-	; self-modifying code - end of helloIsr will execute "ld{a,x,y} <reseta1+1>"
+	; self-modifying code - end of rollerbarIsr will execute "ld{a,x,y} <reseta1+1>"
 	; i.e. this replaces push + pop.
 	sta reseta1+1      ; [4]
 	stx resetx1+1      ; [4]
 	sty resety1+1      ; [4]
 
-	lda #<helloIsr     ; [4]
+	lda #<rollerbarIsr ; [4]
 	sta ISR_LOW        ; [4]
-	lda #>helloIsr     ; ]4]
+	lda #>rollerbarIsr ; ]4]
 	sta ISR_HIGH       ; [4]
 
 	inc RASTER         ; [6]
@@ -477,8 +477,7 @@ bootstrapIsr:              ; [7]
 	nop                ; [63]
 	nop ; may be removed [65]. A raster line is at most 63 cycles long
 
-
-helloIsr:                  ; [7]
+rollerbarIsr:              ; [7]
 	; we came here from bootstrapIsr
 	txs ; restore stack  [2]
 	; wait exactly 6 * (2+3) - 1 cycles so our raster line is in the border
