@@ -3,11 +3,26 @@
 ; =============
 !source "source/regs.asm"
 
-code = $0801 ; Default BASIC area
+; =========
+; CONSTANTS
+; =========
+lineBootstrap       = 15
+lineHello           = 30
+lineScroll          = 60
+lineBirdie          = 150
+lineBottomBorder    = 250
+
+; ==============
+; Data locations
+; ==============
+code    = $0801 ; Default BASIC area
 sprites = $3E00
-tables = $5000
+tables  = $5000
 charset = $3800
 
+; ===============
+; Sprite pointers
+; ===============
 char_H = $f8
 char_E = $f9
 char_L = $fa
@@ -17,27 +32,27 @@ char_B = $fd
 char_I = $fe
 char_R = $ff
 
-lineBootstrap = 0
-lineScroll = 60
-lineBirdie = 150
-lineBottomBorder = 249
+; =========
+; Variables
+; =========
 
-ScrollOffset = $fe
-SmoothScroll = $02
-Temp         = $64
-FrameCounter = $90
-StartupDelayHigh = $92
-StartupDelayLow  = $93
-TransitionCounter = $3
+SmoothScroll        = $A3
+TransitionCounter   = $A4
+FrameCounter        = $A5
+CurrBorderColor     = $A6
+StartupDelayHigh    = $A7
+StartupDelayLow     = $A8
+ScrollOffset        = $A9
 
 ; Flag bits:
 ; 0 = stop Birdie text oscillation
 ; 1 = remove top/bottom border
-Flags           = $FB
-MusicPlayerVar1 = $FC ; Used by music player - don't touch
-MusicPlayerVar2 = $FD ; Used by music player - don't touch
-CurrBorderColor = $91
+Flags               = $FB
 
+MusicPlayerVar1     = $FC ; Used by music player - don't touch
+MusicPlayerVar2     = $FD ; Used by music player - don't touch
+
+Temp                = $FE
 
 *=sprites
 	!binary "sprites/helodbir.prg",512,2
