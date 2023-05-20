@@ -301,6 +301,8 @@ showHello:
 	lda #%11100000
 	sta SPRITE_PRIO
 
+	jsr musicPlay
+
 	rts
 
 
@@ -471,6 +473,8 @@ setBirdieSpriteYPos:
 	; set sprite priority (0=foreground, 1=background)
 	lda #%11000000
 	sta SPRITE_PRIO
+
+	jsr musicPlay
 
 	rts
 
