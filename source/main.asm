@@ -275,7 +275,7 @@ showHello:
 
 	; set sprite priority (0=foreground, 1=background)
 	lda #%11100000
-	sta $d01b
+	sta SPRITE_PRIO
 
 	rts
 
@@ -445,7 +445,7 @@ setBirdieSpriteYPos:
 
 	; set sprite priority (0=foreground, 1=background)
 	lda #%11000000
-	sta $d01b
+	sta SPRITE_PRIO
 
 	rts
 

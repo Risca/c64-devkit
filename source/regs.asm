@@ -9,6 +9,9 @@ SCREEN            = $0400 ; (depends on VIC2_MEM_MAP)
 SPRITES           = $07F8
 COLORS            = $D800
 
+INTCON_1          = $DC0D
+INTCON_2          = $DD0D
+
 ISR_LOW           = $FFFE
 ISR_HIGH          = $FFFF
 
@@ -41,6 +44,8 @@ VIC_CONTROL_2     = $D016
 SPRITE_Y_EXPAND   = $D017
 VIC2_MEM_MAP      = $D018
 INTREQ            = $D019
+VIC_INTCON        = $D01A
+SPRITE_PRIO       = $D01B
 SPRITE_MM_ENABLE  = $D01C
 SPRITE_X_EXPAND   = $D01D
 BORDER_COLOR      = $D020
