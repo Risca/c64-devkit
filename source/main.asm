@@ -109,6 +109,11 @@ start:  ; I'm $080D :)
 	jsr initMisc    ; the rest
 	jsr music
 	jsr initIsr     ; oh, right, interrupts!
+
+	; clear raster interrupt in case it was
+	; triggered during init
+	lda #$ff
+	sta INTREQ
 	cli
 
 main:
@@ -457,9 +462,9 @@ bootstrapIsr:              ; [7]
 	stx resetx1+1      ; [4]
 	sty resety1+1      ; [4]
 
-	lda #<rollerbarIsr ; [4]
+	lda #<rollerbarIsr ; [2]
 	sta ISR_LOW        ; [4]
-	lda #>rollerbarIsr ; ]4]
+	lda #>rollerbarIsr ; ]2]
 	sta ISR_HIGH       ; [4]
 
 	inc RASTER         ; [6]
@@ -468,14 +473,16 @@ bootstrapIsr:              ; [7]
 	tsx                ; [2]
 	; enable interrupts and perform nops until the next interrupt hits
 	cli                ; [2]
-        ; total cycles spent [51] (= 7 + 4*7 + 6*2 + 2*2)
+        ; total cycles spent [47] (= 7 + 4*6 + 6*2 + 2*2)
+	nop                ; [49]
+	nop                ; [51]
 	nop                ; [53]
 	nop                ; [55]
 	nop                ; [57]
 	nop                ; [59]
 	nop                ; [61]
 	nop                ; [63]
-	nop ; may be removed [65]. A raster line is at most 63 cycles long
+!byte $02 ; A raster line is at most 63 cycles long. Add bugtrap.
 
 rollerbarIsr:              ; [7]
 	; we came here from bootstrapIsr
@@ -487,27 +494,6 @@ rollerbarIsr:              ; [7]
         ; total cycles spent [40] (= 7 + 2*2 + 5*(2+3) + (2+2))
 
 	; We're now in the borderlands
-
-	; delay 5 lines: 2 + 62*5 - 1 + 2 + 2 = 5 * 63
-	ldx #62            ; [2]
-	dex                ; [2]
-	bne *-1            ; [3/2]
-	nop                ; [2]
-	nop                ; [2]
-
-	; delay 5 lines
-	ldx #62            ; [2]
-	dex                ; [2]
-	bne *-1            ; [3/2]
-	nop                ; [2]
-	nop                ; [2]
-
-	; delay 5 lines
-	ldx #62            ; [2]
-	dex                ; [2]
-	bne *-1            ; [3/2]
-	nop                ; [2]
-	nop                ; [2]
 
 	; cycles right now:  [40]
 	ldx #0             ; [2]
