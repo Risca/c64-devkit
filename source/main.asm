@@ -117,7 +117,26 @@ start:  ; I'm $080D :)
 	cli
 
 main:
-	jsr textMode
+	lda RASTER
+
+	; if (RASTER == lineHello)
+	cmp #lineHello
+	bne *+7
+	jsr showHello
+	jmp main
+
+	; else if (RASTER == lineScroll)
+	cmp #lineScroll
+	bne *+7
+	jsr scrollText
+	jmp main
+
+	; else if (RASTER == lineBirdie)
+	cmp #lineBirdie
+	bne *+7
+	jsr showBirdie
+	jmp main
+
 	jmp main
 
 
@@ -326,6 +345,7 @@ scrollDrawLetter:
 	sta SCREEN+40*10,y
 
 scrollDone:
+	jsr textMode
 	; update smooth scolling counter
 	dec SmoothScroll
 	rts
@@ -533,12 +553,15 @@ nextRasterLine:
 	lda #0             ; [2]
 	sta BACKGROUND_COLOR;[4]
 
-	jsr showHello
-
 	inc FrameCounter
 	jsr decreaseStartupDelay
 
-	jsr setInterruptScroller
+	lda Flags
+	and #2
+	beq *+8
+	jsr setInterruptBottomBorder
+	jmp *+5
+	jsr setInterruptBootstrap
 
 	lda #$ff
 	sta INTREQ
@@ -554,89 +577,31 @@ resety1:
 	rti
 
 
-scrollerIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
+bottomBorderIsr:                  ; [7]
+	pha                       ; [3]
+	txa                       ; [2]
+	pha                       ; [3]
+	tya                       ; [2]
+	pha                       ; [3]
 
-	lda #$ff
-	sta INTREQ
-
-	jsr scrollText
-
-	jsr setInterruptBirdie
-
-	pla
-	tay
-	pla
-	tax
-	pla
-
-	rti
-
-
-birdieIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
-
-	lda #$ff
-	sta INTREQ
-
-	jsr showBirdie
-	jsr musicPlay
-
-	jsr setInterruptBottomBorder
-
-	pla
-	tay
-	pla
-	tax
-	pla
-
-	rti
-
-
-bottomBorderIsr:
-	pha
-	txa
-	pha
-	tya
-	pha
-
-	lda #$ff
-	sta INTREQ
-
-	lda Flags
-	and #2
-	beq skipHack
+	lda #$ff                  ; [2]
+	sta INTREQ                ; [4]
 
 	; Set 24 rows
-	lda VIC_CONTROL_1
-	and #$F7
-	sta VIC_CONTROL_1
-skipHack:
+	lda VIC_CONTROL_1         ; [4]
+	and #$F7                  ; [2]
+	sta VIC_CONTROL_1         ; [4]
+        ; cycle count so far:       [36]
 
-	jsr musicPlay
-	jsr setInterruptBootstrap
+	jsr setInterruptBootstrap ; [30]
 
-	; Set 25 rows (revert hack in before)
-	lda VIC_CONTROL_1
-	ora #$08
-	sta VIC_CONTROL_1
-
-	pla
-	tay
-	pla
-	tax
-	pla
-
-	rti
-
+	pla                       ; [4]
+	tay                       ; [2]
+	pla                       ; [4]
+	tax                       ; [2]
+	pla                       ; [4]
+	rti                       ; [6]
+        ; isr total: 36 + 30 + 22 = [88]
 
 setInterruptBootstrap:
 	lda #lineBootstrap
@@ -644,28 +609,6 @@ setInterruptBootstrap:
 	lda #<bootstrapIsr
 	sta ISR_LOW
 	lda #>bootstrapIsr
-	sta ISR_HIGH
-
-	rts
-
-
-setInterruptBirdie:
-	lda #lineBirdie
-	sta RASTER
-	lda #<birdieIsr
-	sta ISR_LOW
-	lda #>birdieIsr
-	sta ISR_HIGH
-
-	rts
-
-
-setInterruptScroller:
-	lda #lineScroll
-	sta RASTER
-	lda #<scrollerIsr
-	sta ISR_LOW
-	lda #>scrollerIsr
 	sta ISR_HIGH
 
 	rts
